@@ -18,12 +18,15 @@
     <section id="game" class="game hidden">
       <div class="boardWrap panel"><div class="boardHead"><div><h2>Settore 20 × 20</h2><p id="turnInfo">In attesa…</p></div><div class="legend"><span class="blue">● Alleati</span><span class="red">● Nemici</span></div></div><canvas id="board" width="800" height="800" aria-label="Mappa tattica"></canvas><div class="boardFoot"><span id="actionStatus" role="status">Seleziona un'unità e scegli un'azione.</span><button id="endTurn">Termina turno →</button></div></div>
       <aside class="side">
+        <section id="reactionPanel" class="panel hidden" role="group" aria-label="Difesa in combattimento"></section>
         <section class="panel"><h2>Unità selezionata</h2><div id="unitInfo" class="muted">Seleziona un'unità sulla mappa.</div><div id="actions" class="actions"></div></section>
         <section class="panel"><h2>Flotte</h2><div id="fleet"></div></section>
         <section class="panel"><h2>Registro tattico</h2><div id="log" class="log"></div></section>
       </aside>
     </section>
   </main>
-  <footer>Prototipo 0.1 · Canvas 2D · WebSocket · Turni di squadra</footer>
-  <script src="movement.js"></script><script src="client.js"></script>
+  <footer>Prototipo 0.2 · Canvas 2D · WebSocket · Turni di squadra</footer>
+  <script src="movement.js"></script><script src="rules.js"></script>
+  <script src="client.js"></script>
+
 </body></html>
