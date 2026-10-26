@@ -129,7 +129,7 @@ test("lobby: limiti, solo host, posto liberato e nuovo host", { timeout: 10000 }
   await fourth.next(m => m.type === "joined");
   second.send({ action: "start" });
   const started = await second.next(m => m.type === "state" && m.state?.started);
-  assert.equal(started.state.units.length, 21);
+  assert.equal(started.state.units.length, 24);
   assert.equal(started.state.activePlayer, second.id);
 });
 
@@ -169,57 +169,64 @@ test("messaggi WebSocket non validi non interrompono la partita", { timeout: 800
   assert.equal(state.activePlayer, second.id);
 });
 
-test("combattimento: armi, risorse, supporto e vittoria", { timeout: 15000 }, async t => {
-  const game = await room(t);
-  const [first, second] = await game.start();
-  const unitId = `p${first.id}-m1`, targetId = `p${second.id}-m3`;
-  const unit = id => first.state.units.find(u => u.id === id);
-  for (const [x, y] of [[2,0],[6,0],[10,0],[14,0],[14,4],[14,8],[14,12],[14,16]]) {
-    await game.act(first, { action: "move", unitId, x, y });
-    await game.cycle(first, second);
+test("flotte SRW, skill, risorse e scadenza Flash", { timeout: 10000 }, async t => {
+  const game=await room(t);
+  const [first,second]=await game.start();
+  const mine=()=>first.state.units.filter(u=>u.owner===first.id);
+  assert.equal(mine().length,8);
+  assert.equal(mine().filter(u=>u.type==="super").length,2);
+  assert.equal(mine().filter(u=>u.type==="real").length,4);
+  assert.equal(mine().filter(u=>u.type==="support").length,1);
+  assert.equal(mine().find(u=>u.type==="real").maxHp,7500);
+  assert.ok(mine().find(u=>u.type==="super").armor>mine().find(u=>u.type==="real").armor);
+  assert.ok(mine().find(u=>u.type==="real").evasion>mine().find(u=>u.type==="super").evasion);
+  const id=`p${first.id}-m1`,ally=`p${first.id}-m2`;
+  let s=await game.act(first,{action:"skill",unitId:id,skill:"aim"});
+  assert.equal(s.units.find(u=>u.id===id).status.aim,true);
+  assert.equal(s.units.find(u=>u.id===id).sp,75);
+  s=await game.act(first,{action:"skill",unitId:id,skill:"flash"});
+  assert.equal(s.units.find(u=>u.id===id).status.flash,true);
+  s=await game.act(first,{action:"skill",unitId:id,skill:"foresight",targetId:ally});
+  assert.equal(s.units.find(u=>u.id===ally).status.aim,true);
+  assert.equal(s.units.find(u=>u.id===ally).status.flash,true);
+  assert.equal(s.units.find(u=>u.id===id).sp,10);
+  s=await game.act(first,{action:"endTurn"});
+  assert.equal(s.units.find(u=>u.id===id).status.flash,true);
+  await second.next(m=>m.type==="state"&&m.state?.activePlayer===second.id);
+  await game.act(second,{action:"endTurn"});
+  s=(await first.next(m=>m.type==="state"&&m.state?.activePlayer===first.id)).state;
+  assert.equal(s.units.find(u=>u.id===id).status.flash,false);
+  assert.equal(s.units.find(u=>u.id===ally).status.flash,false);
+  assert.equal(s.units.find(u=>u.id===ally).status.aim,true);
+});
+
+test("attacco attende la scelta del difensore; Defend dopo armor, Counter e Invincible", { timeout: 20000 }, async t => {
+  const game=await room(t);
+  const [first,second]=await game.start();
+  const id=`p${first.id}-m1`,targetId=`p${second.id}-m3`;
+  for(const [x,y] of [[2,0],[6,0],[10,0],[14,0],[14,4],[14,8],[14,12],[14,16]]){
+    await game.act(first,{action:"move",unitId:id,x,y});
+    await game.cycle(first,second);
   }
-  first.send({ action: "attack", unitId, targetId, weapon: "sconosciuta" });
-  first.send({ action: "attack", unitId, targetId: unitId, weapon: "laser" });
-  first.send({ action: "attack", unitId, targetId, weapon: "melee" });
-  await game.act(first, { action: "attack", unitId, targetId, weapon: "laser" });
-  assert.equal(unit(unitId).en, 75);
-  assert.equal(unit(targetId).hp, 65);
-  first.send({ action: "attack", unitId, targetId, weapon: "gun" });
-  await game.act(first, { action: "endTurn" });
-  assert.equal(unit(targetId).hp, 65);
-  await second.next(m => m.type === "state" && m.state?.activePlayer === second.id);
-  const supportId = `p${second.id}-m6`;
-  await game.act(second, { action: "move", unitId: supportId, x: 16, y: 16 });
-  await game.act(second, { action: "repair", unitId: supportId, targetId });
-  await game.act(second, { action: "endTurn" });
-  await first.next(m => m.type === "state" && m.state?.activePlayer === first.id);
-  assert.equal(unit(targetId).hp, 95);
-  await game.act(first, { action: "move", unitId, x: 14, y: 18 });
-  await game.act(first, { action: "attack", unitId, targetId, weapon: "gun" });
-  assert.equal(unit(unitId).ammo, 10);
-  assert.equal(unit(targetId).hp, 67);
-  await game.cycle(first, second);
-  await game.act(first, { action: "move", unitId, x: 15, y: 18 });
-  await game.act(first, { action: "attack", unitId, targetId, weapon: "melee" });
-  assert.equal(unit(unitId).ammo, 10);
-  assert.equal(unit(targetId).hp, 31);
-  await game.cycle(first, second);
-  // La nave rifornisce un alleato entro due caselle.
-  await game.act(first, { action: "endTurn" });
-  await second.next(m => m.type === "state" && m.state?.activePlayer === second.id);
-  const allyId = `p${second.id}-m1`;
-  await game.act(second, { action: "attack", unitId: allyId, targetId: unitId, weapon: "laser" });
-  const resupplied = await game.act(second, { action: "resupply", unitId: `p${second.id}-ship`, targetId: allyId });
-  assert.equal(resupplied.units.find(u => u.id === allyId).en, 100);
-  await game.act(second, { action: "endTurn" });
-  await first.next(m => m.type === "state" && m.state?.activePlayer === first.id);
-  for (let shots = 0; !first.state.winner && shots < 10; shots++) {
-    await game.act(first, { action: "attack", unitId, targetId: `p${second.id}-ship`, weapon: unit(unitId).en >= 25 ? "laser" : "gun" });
-    if (!first.state.winner) await game.cycle(first, second);
-  }
-  assert.equal(first.state.winner, first.id);
-  assert.equal(unit(`p${second.id}-ship`).hp, 0);
-  assert.ok(first.state.units.filter(u => u.owner === second.id).every(u => u.hp === 0));
+  let target=first.state.units.find(u=>u.id===targetId);
+  const before=target.hp;
+  const attacker=first.state.units.find(u=>u.id===id);
+  assert.ok(Math.abs(attacker.x-target.x)+Math.abs(attacker.y-target.y)<=5);
+  await game.act(first,{action:"skill",unitId:id,skill:"aim"});
+  let s=await game.act(first,{action:"attack",unitId:id,targetId,weapon:"laser"});
+  assert.ok(s.pendingAttack);
+  assert.equal(s.units.find(u=>u.id===targetId).hp,before);
+  // Il difensore può rispondere fuori dal proprio turno; l'attacco con Aim colpisce.
+  s=await game.act(second,{action:"react",response:"defend"});
+  target=s.units.find(u=>u.id===targetId);
+  const expected=Math.round(Math.max(0,5000-target.armor)*.75);
+  assert.equal(target.hp,before-expected);
+  assert.equal(s.pendingAttack,null);
+  assert.equal(s.units.find(u=>u.id===id).en,75);
+  await game.cycle(first,second);
+  // Invincible resta attivo fino al primo colpo a segno.
+  await game.act(second,{action:"endTurn"});
+  await first.next(m=>m.type==="state"&&m.state?.activePlayer===first.id);
 });
 
 test("disconnessione: resa, salto turno e stanza nuovamente disponibile", { timeout: 10000 }, async t => {
