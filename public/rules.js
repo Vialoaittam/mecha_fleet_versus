@@ -23,7 +23,7 @@
       min:unit.special.min||2,max:unit.special.max||6,en:unit.special.en||40,
       ammo:0,vt:unit.special.vt||120
     };
-    return weapons[id]||null;
+    return Object.prototype.hasOwnProperty.call(weapons,id)?weapons[id]:null;
   }
   function canFire(unit,id,distance){
     const w=weapon(unit,id);
