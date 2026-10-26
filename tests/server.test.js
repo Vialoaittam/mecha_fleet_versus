@@ -225,6 +225,14 @@ test("attacco attende la scelta del difensore e Defend applica armor prima del 2
   assert.equal(s.pendingAttack,null);
   assert.equal(s.units.find(u=>u.id===id).en,75);
   await game.cycle(first,second);
+  // Counter consuma le risorse del difensore anche fuori dal suo turno.
+  const another=`p${second.id}-m4`;
+  const ammoBefore=first.state.units.find(u=>u.id===another).ammo;
+  await game.act(first,{action:"attack",unitId:id,targetId:another,weapon:"laser"});
+  second.send({action:"react",response:"counter",weapon:"gun"});
+  const countered=(await second.next(m=>m.type==="state"&&m.state?.pendingAttack===null
+    &&m.state?.units.find(u=>u.id===another).ammo===ammoBefore-2)).state;
+  assert.equal(countered.units.find(u=>u.id===another).ammo,ammoBefore-2);
 });
 
 test("disconnessione: resa, salto turno e stanza nuovamente disponibile", { timeout: 10000 }, async t => {
