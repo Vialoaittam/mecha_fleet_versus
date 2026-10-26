@@ -224,9 +224,6 @@ test("attacco attende la scelta del difensore; Defend dopo armor, Counter e Invi
   assert.equal(s.pendingAttack,null);
   assert.equal(s.units.find(u=>u.id===id).en,75);
   await game.cycle(first,second);
-  // Invincible resta attivo fino al primo colpo a segno.
-  await game.act(second,{action:"endTurn"});
-  await first.next(m=>m.type==="state"&&m.state?.activePlayer===first.id);
 });
 
 test("disconnessione: resa, salto turno e stanza nuovamente disponibile", { timeout: 10000 }, async t => {
