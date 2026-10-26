@@ -188,7 +188,7 @@ function handleAction(p,msg) {
     u.x=x;u.y=y;u.moved=true;log(`${u.name} si sposta.`);publish();return;
   }
   if(msg.action==="skill"){
-    const skill=MechRules.skills[msg.skill];
+    const skill=Object.prototype.hasOwnProperty.call(MechRules.skills,msg.skill)?MechRules.skills[msg.skill]:null;
     if(!skill||u.sp<skill.cost)return;
     const target=skill.target==="self"?u:unitById(msg.targetId);
     if(!target||target.hp<=0||target.owner!==p.id)return;
