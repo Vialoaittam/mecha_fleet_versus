@@ -3,7 +3,7 @@
 ## Obiettivo e ambiente
 
 Prototipo PvP tattico per browser: una mappa 20×20, 2–3 giocatori,
-sei mecha e una Capital Ship per giocatore. Il server Node.js è autorevole;
+due Super Robot, quattro Real Robot, un Support e una Capital Ship per giocatore. Il server Node.js è autorevole;
 il browser visualizza lo stato e invia comandi WebSocket.
 
 Richiede Node.js 18 o superiore e npm. L'unica dipendenza applicativa è `ws`.
@@ -43,7 +43,7 @@ HTTP e WebSocket condividono la porta `PORT`, predefinita `8080`, su `0.0.0.0`.
 Il server invia `hello` e uno snapshot `state` alla connessione. Un messaggio
 `{type:"join",name}` assegna l'identità tramite `joined`; il server associa il socket
 al giocatore. I comandi usano `action` (`start`, `endTurn`, `move`, `attack`,
-`resupply`, `repair`) con `unitId` e, secondo il caso, `x`/`y`, `targetId` o `weapon`.
+`resupply`, `repair`, `skill`, `react`) con `unitId` e, secondo il caso, `x`/`y`, `targetId` o `weapon`.
 Le modalità `armMove`, `armLaser`, ecc. sono locali al client, non comandi del server.
 Le azioni accettate pubblicano un nuovo snapshot a tutti i socket.
 
@@ -57,11 +57,13 @@ Le azioni accettate pubblicano un nuovo snapshot a tutti i socket.
   Il movimento usa passi ortogonali (4 per mecha, 3 per supporto), resta nella mappa
   e non attraversa né occupa altre unità vive. Modifica `movement.js` per mantenere
   identiche convalida del server e caselle evidenziate dal client.
-- Solo `melee`, `gun`, `laser` sono armi valide. Melee: distanza 1, nessun consumo;
-  gun: distanza 2–5 e 2 munizioni; laser: distanza 2–5 e 25 EN.
+- Armi valide: `melee`, `gun`, `laser` e `special` (individuale, VT >=120). Usa `public/rules.js` condiviso tra server e browser per statistiche, costi e gittate.
+- Gli attacchi creano `state.pendingAttack`; solo il proprietario del difensore può rispondere con `react` (`defend`, `evade` o `counter` + arma). Il server risolve colpi, armatura, SP, VT e distruzione; durante l'attesa nessun'altra azione è ammessa.
+- Skill: `aim`, `flash`, `invincible`, `foresight`, `trust`, `gain`. Le skill consumano SP e non l'azione; Flash scade all'inizio del prossimo turno del proprietario, Invincible si consuma solo se arriva danno.
+
 - Supporto e nave riparano o riforniscono un'altra unità propria entro distanza 2,
   rispettando i massimi HP/EN/munizioni e consumando l'azione.
-- Fine turno: azzera `moved`/`acted` e rigenera 8 EN alle unità vive del giocatore
+- Fine turno: azzera `moved`/`acted` e rigenera 8 EN e 10 SP alle unità vive del giocatore
   uscente, poi passa al prossimo proprietario con nave viva. Il giro aumenta il round.
 - Nave distrutta: elimina tutta la flotta; l'ultima nave viva determina il vincitore.
   Nessuna azione di gioco è ammessa dopo la vittoria.
@@ -69,7 +71,7 @@ Le azioni accettate pubblicano un nuovo snapshot a tutti i socket.
   rimasto. Disconnessione durante la partita: resa, eliminazione della flotta e
   passaggio del turno se necessario. Non esistono riconnessione o persistenza.
   Quando tutti i giocatori escono, la stanza torna alla lobby vuota.
-- Il Canvas deve restare quadrato. La conversione clic→casella usa le dimensioni
+- Il pannello di reazione deve essere disponibile al difensore anche fuori dal suo turno. Il Canvas deve restare quadrato. La conversione clic→casella usa le dimensioni
   effettive del contenuto, escludendo il bordo. Le istruzioni durante la partita
   vanno in `actionStatus`, quelle della lobby in `lobbyStatus`.
 - I nomi e il registro visualizzati come HTML devono passare da `esc`.
