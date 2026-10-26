@@ -1,6 +1,6 @@
 # Mecha Fleet: Versus — prototipo 0.2
 
-Prototipo browser 2D leggero: mappa 20×20, 2–3 giocatori, 2 Super Robot + 4 Real Robot + Support + Capital Ship per giocatore, turni di squadra, HP/EN/munizioni/VT, attacchi melee/ranged, supporto e vittoria per distruzione della Capital Ship.
+Prototipo browser 2D leggero: mappa 20×20, 2–3 giocatori, 2 Super Robot + 4 Real Robot + Support + Capital Ship per giocatore, turni di squadra, HP/EN/SP/munizioni/VT, attacchi melee/ranged, supporto e vittoria per distruzione della Capital Ship.
 
 ## Requisiti
 - Node.js 18 o superiore
@@ -45,7 +45,7 @@ un DOM minimale, senza coprire la resa grafica nel browser.
 2. **Terzo giocatore:** prima dell'avvio, apri la pagina da un terzo browser; deve comparire nella lobby. Il quarto ingresso deve essere rifiutato.
 3. **Turni:** il giocatore attivo muove/attacca; l'altro deve vedere gli aggiornamenti e non poter agire fino al proprio turno.
 4. **Movimento:** un mecha può muoversi entro 4 caselle Manhattan (supporto 3); non può attraversare/occupare caselle già occupate. La Capital Ship si muove di 1 casella per turno (mecha 4, supporto 3).
-5. **Armi:** melee richiede adiacenza e non consuma risorse; fucile e laser richiedono distanza 2–5. Fucile consuma 2 munizioni, laser 25 EN. Le armi della Capital Ship infliggono il 75% di danni in più (arrotondati).
+5. **Armi:** melee richiede adiacenza e non consuma risorse; fucile e laser richiedono distanza 2–5. Fucile consuma 2 munizioni, laser 25 EN. Le speciali sono individuali e richiedono VT ≥120 e 40 EN. Il difensore sceglie Counter, Defend o Evade.
 6. **Supporto:** un'unità Support o Capital Ship può rifornire/riparare un alleato entro 2 caselle.
 7. **Vittoria:** attacca la Capital Ship finché HP=0; la flotta del proprietario viene eliminata e la partita termina quando resta una sola nave.
 8. **Disconnessione:** in lobby libera il posto e, se esce l'host, il primo rimasto diventa host. Durante la partita equivale alla resa: la flotta viene eliminata e il turno passa al prossimo giocatore vivo. Non è previsto il recupero della sessione; anche ricaricare la pagina causa la resa.
