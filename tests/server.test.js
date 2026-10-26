@@ -200,7 +200,7 @@ test("flotte SRW, skill, risorse e scadenza Flash", { timeout: 10000 }, async t 
   assert.equal(s.units.find(u=>u.id===ally).status.aim,true);
 });
 
-test("attacco attende la scelta del difensore; Defend dopo armor, Counter e Invincible", { timeout: 20000 }, async t => {
+test("attacco attende la scelta del difensore e Defend applica armor prima del 25%", { timeout: 20000 }, async t => {
   const game=await room(t);
   const [first,second]=await game.start();
   const id=`p${first.id}-m1`,targetId=`p${second.id}-m3`;
@@ -217,7 +217,8 @@ test("attacco attende la scelta del difensore; Defend dopo armor, Counter e Invi
   assert.ok(s.pendingAttack);
   assert.equal(s.units.find(u=>u.id===targetId).hp,before);
   // Il difensore può rispondere fuori dal proprio turno; l'attacco con Aim colpisce.
-  s=await game.act(second,{action:"react",response:"defend"});
+  second.send({action:"react",response:"defend"});
+  s=(await second.next(m=>m.type==="state"&&m.state?.pendingAttack===null&&m.state?.units.find(u=>u.id===targetId).hp<before)).state;
   target=s.units.find(u=>u.id===targetId);
   const expected=Math.round(Math.max(0,5000-target.armor)*.75);
   assert.equal(target.hp,before-expected);
