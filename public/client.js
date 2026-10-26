@@ -79,15 +79,17 @@ function renderAll(){
         ?`Round ${state.round} · È il tuo turno`
         :`Round ${state.round} · Turno di ${players.find(p=>p.id===state.activePlayer)?.name||"avversario"}`;
 
-    $("endTurn").disabled=!connected||state.activePlayer!==myId||!!state.winner;
+    $("endTurn").disabled=!connected||state.activePlayer!==myId||!!state.winner||!!state.pendingAttack;
     draw();
     renderUnit();
     renderFleet();
+    renderReaction();
     $("log").innerHTML=state.log.map(x=>`<div>${esc(x)}</div>`).join("");
   }else{
     $("lobby").classList.remove("hidden");
     $("game").classList.add("hidden");
     selected=null;
+    $("reactionPanel")?.classList.add("hidden");
   }
 }
 
@@ -205,74 +207,104 @@ function renderUnit(){
   const box=$("unitInfo"),actions=$("actions");
   actions.innerHTML="";
   const u=state?.units.find(z=>z.id===selected&&z.hp>0);
-
-  if(!u){
-    box.innerHTML='<span class="muted">Seleziona un’unità sulla mappa.</span>';
-    return;
-  }
-
+  if(!u){box.innerHTML='<span class="muted">Seleziona un’unità sulla mappa.</span>';return;}
+  const statuses=Object.entries(u.status||{}).filter(([,active])=>active).map(([name])=>name).join(", ")||"nessuno";
   box.innerHTML=`
-    <strong>${esc(u.name)}</strong> · ${u.owner===myId?"Alleata":"Nemica"}
-    <div class="stat">
-      <div class="statTop"><span>HP</span><span>${u.hp}/${u.maxHp}</span></div>
-      <div class="bar hp"><i style="width:${100*u.hp/u.maxHp}%"></i></div>
-    </div>
-    <div class="stat">
-      <div class="statTop"><span>Energia</span><span>${u.en}/${u.maxEn}</span></div>
-      <div class="bar en"><i style="width:${100*u.en/u.maxEn}%"></i></div>
-    </div>
-    <div class="stat">
-      <div class="statTop"><span>Munizioni</span><span>${u.ammo}/${u.maxAmmo}</span></div>
-      <div class="bar"><i style="width:${100*u.ammo/u.maxAmmo}%"></i></div>
-    </div>
-    <div class="stat">
-      <div class="statTop"><span>Volontà</span><span>${u.vt}/150</span></div>
-      <div class="bar vt"><i style="width:${100*u.vt/150}%"></i></div>
-    </div>
-    <small class="muted">
-      ${u.moved?"Movimento usato":"Movimento disponibile"} ·
-      ${u.acted?"Azione usata":"Azione disponibile"}
-    </small>
+    <strong>${esc(u.name)}</strong> · ${u.owner===myId?"Alleata":"Nemica"} · ${esc(u.type)}
+    <div class="stat"><div class="statTop"><span>HP</span><span>${u.hp}/${u.maxHp}</span></div>
+      <div class="bar hp"><i style="width:${100*u.hp/u.maxHp}%"></i></div></div>
+    <div class="stat"><div class="statTop"><span>Energia</span><span>${u.en}/${u.maxEn}</span></div>
+      <div class="bar en"><i style="width:${100*u.en/u.maxEn}%"></i></div></div>
+    <div class="stat"><div class="statTop"><span>Munizioni</span><span>${u.ammo}/${u.maxAmmo}</span></div>
+      <div class="bar"><i style="width:${100*u.ammo/u.maxAmmo}%"></i></div></div>
+    <div class="stat"><div class="statTop"><span>Volontà</span><span>${u.vt}/150</span></div>
+      <div class="bar vt"><i style="width:${100*u.vt/150}%"></i></div></div>
+    <div class="stat"><div class="statTop"><span>SP</span><span>${u.sp??0}/${u.maxSp??100}</span></div>
+      <div class="bar"><i style="width:${100*(u.sp??0)/(u.maxSp||100)}%"></i></div></div>
+    <small class="muted">Armor: ${u.armor||0} · Evasione: ${Math.round(100*(u.evasion||0))}%
+    · Stati: ${esc(statuses)}<br>${u.moved?"Movimento usato":"Movimento disponibile"} ·
+    ${u.acted?"Azione usata":"Azione disponibile"}</small>
   `;
-
-  if(ws?.readyState!==WebSocket.OPEN||u.owner!==myId||state.activePlayer!==myId||state.winner)return;
-
-  const add=(label,action)=>{
+  if(ws?.readyState!==WebSocket.OPEN||u.owner!==myId||state.activePlayer!==myId||state.winner||state.pendingAttack)return;
+  const add=(label,action,disabled=false)=>{
     const b=document.createElement("button");
-    b.textContent=label;
+    b.textContent=label;b.disabled=disabled;
     b.onclick=()=>armMode(action);
     actions.appendChild(b);
   };
-
   if(u.move>0&&!u.moved)add("Muovi: scegli casella","armMove");
   if(!u.acted){
-    add("Attacca melee","armMelee");
-    add("Fucile (2 ammo)","armGun");
-    add("Laser (25 EN)","armLaser");
+    for(const id of ["melee","gun","laser","special"]){
+      const w=MechRules.weapon(u,id);
+      if(!w)continue;
+      add(w.label+(id==="special"?` (VT ${w.vt}, ${w.en} EN)`:""),"armAttack:"+id,
+        u.en<w.en||u.ammo<w.ammo||u.vt<w.vt);
+    }
   }
   if((u.type==="support"||u.type==="ship")&&!u.acted){
     add("Rifornisci alleato","armResupply");
     add("Ripara alleato","armRepair");
   }
+  for(const [id,skill] of Object.entries(MechRules.skills)){
+    if((u.sp||0)<skill.cost)continue;
+    const b=document.createElement("button");
+    b.textContent=`${skill.label} (${skill.cost} SP)`;
+    b.onclick=()=>{
+      if(skill.target==="self"){
+        send({action:"skill",unitId:u.id,skill:id});
+        mode=null;$("actionStatus").textContent=`${skill.label} inviato.`;
+      }else armMode("armSkill:"+id);
+    };
+    actions.appendChild(b);
+  }
 }
-
-let mode=null;
-
+function renderReaction(){
+  const panel=$("reactionPanel");
+  if(!panel)return;
+  panel.innerHTML="";
+  const pending=state?.pendingAttack;
+  if(!pending||pending.defenderOwner!==myId||state.winner){
+    panel.classList.add("hidden");return;
+  }
+  const attacker=state.units.find(u=>u.id===pending.attackerId);
+  const defender=state.units.find(u=>u.id===pending.targetId);
+  if(!attacker||!defender)return;
+  panel.classList.remove("hidden");
+  const label=document.createElement("p");
+  label.textContent=`${attacker.name} attacca ${defender.name} con ${MechRules.weapon(attacker,pending.weapon)?.label||pending.weapon}. Scegli la difesa:`;
+  panel.appendChild(label);
+  function button(text,response,weapon){
+    const b=document.createElement("button");
+    b.textContent=text;
+    b.onclick=()=>send({action:"react",response,weapon});
+    panel.appendChild(b);
+  }
+  button("Defend (-25% danno dopo armor)","defend");
+  button("Evade (+25% evasione)","evade");
+  for(const id of ["melee","gun","laser","special"]){
+    if(MechRules.canFire(defender,id,Math.abs(defender.x-attacker.x)+Math.abs(defender.y-attacker.y)))
+      button("Counter: "+MechRules.weapon(defender,id).label,"counter",id);
+  }
+}
 function armMode(m){
   mode=m;
   const names={
     armMove:"Clicca una casella valida per muovere.",
-    armMelee:"Clicca un nemico adiacente.",
-    armGun:"Clicca un nemico a distanza 2–5.",
-    armLaser:"Clicca un nemico a distanza 2–5.",
     armResupply:"Clicca un alleato entro 2 caselle.",
     armRepair:"Clicca un alleato da riparare entro 2 caselle."
   };
-  $("actionStatus").textContent=names[m]+" Riclicca l'unità selezionata per annullare.";
+  if(m.startsWith("armAttack:")){
+    const u=state?.units.find(z=>z.id===selected);
+    const w=u&&MechRules.weapon(u,m.slice(10));
+    $("actionStatus").textContent=`Clicca un nemico a distanza ${w?.min||1}–${w?.max||5}. Riclicca l'unità per annullare.`;
+  }else if(m.startsWith("armSkill:")){
+    $("actionStatus").textContent="Clicca un'altra unità alleata per applicare la skill.";
+  }else $("actionStatus").textContent=(names[m]||"Scegli un bersaglio.")+" Riclicca l'unità selezionata per annullare.";
 }
+let mode=null;
 
 canvas.addEventListener("click",e=>{
-  if (!state || !state.started || state.winner) return;
+  if (!state || !state.started || state.winner || state.pendingAttack) return;
 
   // Converte correttamente il clic in coordinate della griglia.
   const rect = canvas.getBoundingClientRect();
@@ -379,47 +411,28 @@ canvas.addEventListener("click",e=>{
     return;
   }
 
-  const weapons = {
-    armMelee: "melee",
-    armGun: "gun",
-    armLaser: "laser"
-  };
-
   const distance=Math.abs(unit.x-clicked.x)+Math.abs(unit.y-clicked.y);
-  if (weapons[mode]) {
-    const melee=mode==="armMelee";
-    if (clicked.owner===myId || (melee ? distance!==1 : distance<2||distance>5)) {
-      $("actionStatus").textContent=melee?"Scegli un nemico adiacente.":"Scegli un nemico a distanza 2–5.";
+  if(mode.startsWith("armAttack:")){
+    const weapon=mode.slice(10);
+    const w=MechRules.weapon(unit,weapon);
+    if(clicked.owner===myId||!MechRules.canFire(unit,weapon,distance)){
+      $("actionStatus").textContent=w
+        ?`Scegli un nemico a distanza ${w.min}–${w.max}, con risorse e VT sufficienti.`
+        :"Arma non valida.";
       return;
     }
-    if ((mode==="armGun" && unit.ammo<2) || (mode==="armLaser" && unit.en<25)) {
-      $("actionStatus").textContent="Munizioni o energia insufficienti.";
-      return;
+    send({action:"attack",unitId:unit.id,targetId:clicked.id,weapon});
+  }else if(mode.startsWith("armSkill:")){
+    if(clicked.owner!==myId||clicked.id===unit.id){
+      $("actionStatus").textContent="Scegli un'altra unità alleata.";return;
     }
-    send({
-      action: "attack",
-      unitId: unit.id,
-      targetId: clicked.id,
-      weapon: weapons[mode]
-    });
-  } else {
-    if (clicked.owner!==myId || clicked.id===unit.id || distance>2) {
-      $("actionStatus").textContent="Scegli un'altra unità alleata entro 2 caselle.";
-      return;
+    send({action:"skill",unitId:unit.id,targetId:clicked.id,skill:mode.slice(9)});
+  }else{
+    if(clicked.owner!==myId||clicked.id===unit.id||distance>2){
+      $("actionStatus").textContent="Scegli un'altra unità alleata entro 2 caselle.";return;
     }
-    if (mode === "armResupply") {
-      send({
-        action: "resupply",
-        unitId: unit.id,
-        targetId: clicked.id
-      });
-    } else if (mode === "armRepair") {
-      send({
-        action: "repair",
-        unitId: unit.id,
-        targetId: clicked.id
-      });
-    }
+    if(mode==="armResupply")send({action:"resupply",unitId:unit.id,targetId:clicked.id});
+    else if(mode==="armRepair")send({action:"repair",unitId:unit.id,targetId:clicked.id});
   }
 
   mode = null;

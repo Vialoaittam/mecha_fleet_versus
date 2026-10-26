@@ -41,7 +41,7 @@ function client() {
     document: { getElementById: get, createElement: element },
     location: { protocol: "http:", host: "localhost:8080" }, WebSocket: Socket
   });
-  for (const file of ["movement.js", "client.js"]) {
+  for (const file of ["movement.js", "rules.js", "client.js"]) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../public", file), "utf8"), context);
   }
   const ws = Socket.instance;
@@ -126,4 +126,34 @@ test("bersaglio non valido mostra il motivo e l'azione si può annullare", () =>
   c.clickCell(2, 1);
   c.clickCell(3, 1);
   assert.equal(c.read("selected"), "p2-m1");
+});
+
+test("il difensore sceglie la reazione anche durante il turno avversario", () => {
+  const c=client();
+  const {state,players}=started(c);
+  state.activePlayer=2;
+  state.pendingAttack={attackerId:"p2-m1",targetId:"p1-m1",defenderOwner:1,weapon:"laser"};
+  c.receive({type:"state",state,players});
+  const defend=c.get("reactionPanel").children.find(x=>x.textContent.includes("Defend"));
+  assert.ok(defend);
+  defend.click();
+  assert.equal(c.ws.messages.at(-1).action,"react");
+  assert.equal(c.ws.messages.at(-1).response,"defend");
+  assert.equal(c.get("endTurn").disabled,true);
+});
+
+test("le skill personali consumano un comando dedicato e le speciali richiedono VT", () => {
+  const c=client();
+  const {state,players}=started(c);
+  state.units[0].sp=100;
+  state.units[0].maxSp=100;
+  state.units[0].status={aim:false,flash:false,invincible:false};
+  state.units[0].special={name:"Beam Burst",damage:7000,vt:120,en:40,min:2,max:6};
+  c.receive({type:"state",state,players});
+  c.clickCell(2,1);
+  const special=c.get("actions").children.find(x=>x.textContent.includes("Beam Burst"));
+  assert.equal(special.disabled,true);
+  c.get("actions").children.find(x=>x.textContent.includes("Aim")).click();
+  assert.equal(c.ws.messages.at(-1).action,"skill");
+  assert.equal(c.ws.messages.at(-1).skill,"aim");
 });
