@@ -1,0 +1,9 @@
+{
+  "name": "mecha-fleet-versus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight browser-based turn-based mecha PvP prototype",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test" },
+  "dependencies": { "ws": "^8.18.0" }
+}
