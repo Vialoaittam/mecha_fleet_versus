@@ -18,6 +18,7 @@
     laser:{label:"Laser (25 EN)",damage:5000,accuracy:.85,min:2,max:5,en:25,ammo:0,vt:0}
   };
   function weapon(unit,id){
+    if(typeof id!=="string")return null;
     if(id==="special"&&unit.special)return {
       label:unit.special.name,damage:unit.special.damage,accuracy:unit.special.accuracy||.8,
       min:unit.special.min||2,max:unit.special.max||6,en:unit.special.en||40,

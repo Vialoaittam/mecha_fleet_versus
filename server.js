@@ -171,6 +171,10 @@ function resolveReaction(p,msg) {
   state.pendingAttack=null;
   strike(attacker,target,pending.weapon,msg.response);
   if(msg.response==="counter"&&target.hp>0&&!state.winner)strike(target,attacker,msg.weapon,"normal");
+  // Un contrattacco può eliminare la flotta del giocatore di turno.
+  if(!state.winner&&!state.units.some(u=>u.owner===state.activePlayer&&u.type==="ship"&&u.hp>0)){
+    endTurn(currentPlayer());return;
+  }
   publish();
 }
 function handleAction(p,msg) {
@@ -188,6 +192,7 @@ function handleAction(p,msg) {
     u.x=x;u.y=y;u.moved=true;log(`${u.name} si sposta.`);publish();return;
   }
   if(msg.action==="skill"){
+    if(typeof msg.skill!=="string")return;
     const skill=Object.prototype.hasOwnProperty.call(MechRules.skills,msg.skill)?MechRules.skills[msg.skill]:null;
     if(!skill||u.sp<skill.cost)return;
     const target=skill.target==="self"?u:unitById(msg.targetId);
