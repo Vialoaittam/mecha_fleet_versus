@@ -44,9 +44,9 @@ un DOM minimale, senza coprire la resa grafica nel browser.
 1. **Due giocatori:** apri la pagina in due browser/dispositivi; verifica che entrambi compaiano nella lobby e che il pulsante Avvia sia attivo solo per l'host.
 2. **Terzo giocatore:** prima dell'avvio, apri la pagina da un terzo browser; deve comparire nella lobby. Il quarto ingresso deve essere rifiutato.
 3. **Turni:** il giocatore attivo muove/attacca; l'altro deve vedere gli aggiornamenti e non poter agire fino al proprio turno.
-4. **Movimento:** un mecha può muoversi entro 4 caselle Manhattan (supporto 3); non può attraversare/occupare caselle già occupate. La Capital Ship si muove di 1 casella per turno (mecha 4, supporto 3).
+4. **Movimento:** ogni mecha ha movimento fra 3 e 5 caselle Manhattan secondo il ruolo; non può attraversare/occupare caselle già occupate. La Capital Ship si muove di 1 casella per turno.
 5. **Armi:** melee richiede adiacenza e non consuma risorse; fucile e laser richiedono distanza 2–5. Fucile consuma 2 munizioni, laser 25 EN. Le speciali sono individuali e richiedono VT ≥120 e 40 EN. Il difensore sceglie Counter, Defend o Evade da un pannello di combattimento dedicato.
-6. **Supporto:** un'unità Support o Capital Ship può rifornire/riparare un alleato entro 2 caselle.
+6. **Supporto:** la Capital Ship può rifornire/riparare un alleato entro 2 caselle.
 7. **Vittoria:** attacca la Capital Ship finché HP=0; la flotta del proprietario viene eliminata e la partita termina quando resta una sola nave.
 8. **Disconnessione:** in lobby libera il posto e, se esce l'host, il primo rimasto diventa host. Durante la partita equivale alla resa: la flotta viene eliminata e il turno passa al prossimo giocatore vivo. Non è previsto il recupero della sessione; anche ricaricare la pagina causa la resa.
 9. **Nuova partita:** dopo che tutti i giocatori hanno chiuso le rispettive schede, la stanza torna disponibile senza riavviare il server. Riapri le pagine per entrare di nuovo.
