@@ -55,7 +55,7 @@ Le azioni accettate pubblicano un nuovo snapshot a tutti i socket.
 - L'identità arriva dall'associazione al socket, mai da un proprietario dichiarato
   dal client. Il server convalida turno, proprietà, HP e disponibilità dell'azione.
 - Ogni unità muove una volta e agisce una volta per turno. La Capital Ship può muoversi di 1 casella per turno e ha una speciale a gittata 8; i danni delle armi non hanno un moltiplicatore generale.
-  Il movimento usa passi ortogonali (4 per mecha, 3 per supporto), resta nella mappa
+  Il movimento usa passi ortogonali (3–5 per mecha secondo il ruolo), resta nella mappa
   e non attraversa né occupa altre unità vive. Modifica `movement.js` per mantenere
   identiche convalida del server e caselle evidenziate dal client.
 - Armi valide: `melee`, `gun`, `laser` e `special` (individuale, VT >=120). I danni, costi e nomi individuali sono in `public/factions.js`; `public/rules.js` li consulta da server e browser. Ogni colpo oscilla ±4%. Le scelte di fazione sono uniche in una lobby.
