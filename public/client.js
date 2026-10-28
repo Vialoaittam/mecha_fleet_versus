@@ -309,9 +309,6 @@ function renderReaction(){
   defenseBox.appendChild(targetTitle);defenseBox.appendChild(armorTitle);
   match.appendChild(attackBox);match.appendChild(versus);match.appendChild(defenseBox);
   panel.appendChild(match);
-  const choices=document.createElement("div");
-  choices.className="combatChoices";
-  panel.appendChild(choices);
   function button(title,detail,response,weapon){
     const b=document.createElement("button");
     const strong=document.createElement("strong");
@@ -322,8 +319,6 @@ function renderReaction(){
     // Consente anche ai browser con lettori di schermo di riconoscere la scelta.
     b.setAttribute?.("aria-label",title+": "+detail);
     b.onclick=()=>send({action:"react",response,weapon});
-    choices.appendChild(b);
-    // I test DOM esistenti cercano pulsanti tra i figli del pannello.
     panel.appendChild(b);
   }
   button("Defend","-25% danno residuo dopo l'armatura","defend");
