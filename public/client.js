@@ -311,11 +311,7 @@ function renderReaction(){
   panel.appendChild(match);
   function button(title,detail,response,weapon){
     const b=document.createElement("button");
-    const strong=document.createElement("strong");
-    strong.textContent=title;
-    const small=document.createElement("small");
-    small.textContent=detail;
-    b.appendChild(strong);b.appendChild(small);
+    b.textContent=title+" · "+detail;
     // Consente anche ai browser con lettori di schermo di riconoscere la scelta.
     b.setAttribute?.("aria-label",title+": "+detail);
     b.onclick=()=>send({action:"react",response,weapon});
