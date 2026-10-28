@@ -14,10 +14,10 @@ select:disabled{opacity:.6}
 .combatMatchup small{display:block;color:#aebdcd;margin-top:4px}
 .combatVS{font-size:18px;color:#f2be70;font-weight:900}
 .combatChoices{display:grid;gap:7px}
-.combatChoices button{width:100%;text-align:left;border:1px solid #53637a;background:linear-gradient(90deg,#263e5a,#17283c);border-radius:9px;padding:10px 12px;white-space:normal}
-.combatChoices button:hover:not(:disabled),.combatChoices button:focus-visible{border-color:#f0c078;background:#385370;outline:2px solid #f0c07844}
-.combatChoices button strong{display:block;font-size:13px}
-.combatChoices button small{display:block;color:#c4ceda;font-size:11px}
+.combatPanel > button{width:100%;text-align:left;border:1px solid #53637a;background:linear-gradient(90deg,#263e5a,#17283c);border-radius:9px;padding:10px 12px;white-space:normal}
+.combatPanel > button:hover:not(:disabled),.combatPanel > button:focus-visible{border-color:#f0c078;background:#385370;outline:2px solid #f0c07844}
+.combatPanel > button strong{display:block;font-size:13px}
+.combatPanel > button small{display:block;color:#c4ceda;font-size:11px}
 .combatSeparator{color:#f0c078;font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin:12px 0 7px;font-weight:700}
 .actions button{white-space:normal;text-align:left}
 @media(max-width:600px){.combatMatchup{grid-template-columns:1fr;gap:4px}.combatVS{text-align:center}}
