@@ -5,6 +5,7 @@ const os = require("os");
 const WebSocket = require("ws");
 const reachableCells = require("./public/movement");
 const MechRules = require("./public/rules");
+const MechFactions = require("./public/factions");
 
 const PORT = Number(process.env.PORT || 8080);
 const PUBLIC = path.join(__dirname, "public");
@@ -34,68 +35,37 @@ function send(ws, obj) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stri
 function broadcast(obj) { for (const ws of wss.clients) send(ws, obj); }
 function snapshot() {
   return { type:"state", state: state ? JSON.parse(JSON.stringify(state)) : null,
-    players: players.map(p => ({id:p.id,name:p.name,team:p.team,connected:!!p.ws})) };
+    players: players.map(p => ({id:p.id,name:p.name,team:p.team,faction:p.faction,
+      factionName:MechFactions.getFaction(p.faction)?.name||"",connected:!!p.ws})) };
 }
 function publish() { broadcast(snapshot()); }
 function createState() {
-  const teamDefs = [
+  const teamDefs=[
     {x:1,y:1,dx:1,dy:1,color:"#5aa9ff"},
     {x:18,y:18,dx:-1,dy:-1,color:"#ff6b6b"},
     {x:18,y:1,dx:-1,dy:1,color:"#c084fc"}
   ];
-  const ships = [
-    {name:"Yamato",special:"Wave Motion Gun",damage:11500},
-    {name:"Nadesico",special:"Gravity Blast",damage:10500},
-    {name:"Macross",special:"Daedalus Attack",damage:11000}
-  ];
-  const supers = [
-    ["Mazinger Z","Breast Fire"],["Getter Robo","Getter Beam"],
-    ["Grendizer","Space Thunder"],["Combattler V","Choudenji Spin"],
-    ["Daitarn 3","Sun Attack"],["Gaogaigar","Hell and Heaven"]
-  ];
-  const reals = [
-    ["RX-78 Gundam","Beam Saber Burst"],["Zeta Gundam","Hyper Mega Launcher"],
-    ["Nu Gundam","Fin Funnel Barrage"],["Wing Zero","Twin Buster Rifle"],
-    ["Strike Freedom","Full Burst"],["Exia","Trans-Am Slash"],
-    ["L-Gaim","Buster Launcher"],["Dunbine","Aura Slash"],
-    ["Valkyrie VF-1","Missile Storm"],["Scopedog","Arm Punch"],
-    ["F91 Gundam","VSBR"],["Aerial","GUND-BIT"]
-  ];
-  const supports = [
-    ["Methuss","Repair Beam"],["Boss Borot","Borot Punch"],["Ra Cailum Escort","Escort Cannon"]
-  ];
-  // Assegnazione casuale senza ripetizioni tra le flotte della stessa partita.
-  for (const pool of [ships,supers,reals,supports])
-    for (let i=pool.length-1;i>0;i--) {
-      const j=Math.floor(Math.random()*(i+1));
-      [pool[i],pool[j]]=[pool[j],pool[i]];
-    }
+  const offsets=[[0,0],[1,0],[0,1],[2,0],[0,2]];
   const units=[];
   players.forEach((p,idx)=>{
-    const d=teamDefs[idx], ship=ships[idx];
-    const roster=[
-      {type:"ship",name:ship.name,special:ship.special,damage:ship.damage,hp:28000,armor:1500,evasion:.06,accuracy:.04,move:1},
-      ...supers.slice(idx*2,idx*2+2).map(([name,special])=>({type:"super",name,special,damage:8500,hp:15000,armor:1150,evasion:.07,accuracy:.04,move:4})),
-      ...reals.slice(idx*4,idx*4+4).map(([name,special])=>({type:"real",name,special,damage:7200,hp:7500,armor:300,evasion:.27,accuracy:.08,move:4})),
-      {type:"support",name:supports[idx][0],special:supports[idx][1],damage:3900,hp:9000,armor:500,evasion:.12,accuracy:.05,move:3}
-    ];
-    const offsets=[[0,0],[1,0],[0,1],[2,0],[0,2],[2,1],[1,2],[3,0]];
+    const d=teamDefs[idx];
+    const roster=MechFactions.buildRoster(p.faction);
     roster.forEach((r,i)=>{
-      const [ox,oy]=offsets[i];
-      const x=d.x+d.dx*ox,y=d.y+d.dy*oy;
+      const [ox,oy]=offsets[i],x=d.x+d.dx*ox,y=d.y+d.dy*oy;
       units.push({
         id:i===0?`p${p.id}-ship`:`p${p.id}-m${i}`,
-        owner:p.id,team:idx,type:r.type,name:r.name,x,y,
+        owner:p.id,team:idx,type:r.type,role:r.role,faction:p.faction,
+        name:r.name,x,y,
         hp:r.hp,maxHp:r.hp,armor:r.armor,evasion:r.evasion,accuracy:r.accuracy,
         en:100,maxEn:100,ammo:16,maxAmmo:16,sp:100,maxSp:100,vt:100,
         moved:false,acted:false,color:d.color,move:r.move,
-        special:{name:r.special,damage:r.damage,vt:120,en:40,min:2,max:r.type==="ship"?8:6},
+        special:r.special,weapons:r.weapons,
         status:{aim:false,flash:false,invincible:false}
       });
     });
   });
   return {started:true,turn:0,activePlayer:players[0].id,round:1,units,
-    log:["Partita iniziata: 2 Super, 4 Real, 1 Support e 1 Capital Ship per pilota."],
+    log:["Partita iniziata: 1 Capital Ship + 4 unità per ogni fazione."],
     pendingAttack:null,winner:null};
 }
 function currentPlayer() { return players.find(p => p.id === state?.activePlayer); }
@@ -127,7 +97,9 @@ function strike(attacker,target,weaponId,defense) {
   const hit=Math.random()<chance;
   let damage=0;
   if(hit){
-    damage=Math.max(0,Math.round(w.damage+(attacker.vt-100)*18)-(target.armor||0));
+    // Oscillazione limitata (±4%) per distinguere attacchi identici consecutivi.
+    const baseDamage=Math.round(w.damage*(.96+Math.random()*.08)+(attacker.vt-100)*18);
+    damage=Math.max(0,baseDamage-(target.armor||0));
     if(defense==="defend")damage=Math.round(damage*.75);
     if(target.status.invincible && damage>0){damage=Math.min(damage,10);target.status.invincible=false;}
     target.hp=Math.max(0,target.hp-damage);
@@ -234,7 +206,7 @@ function handleAction(p,msg) {
 }
 wss.on("connection", ws => {
   sockets.set(ws, null);
-  send(ws,{type:"hello",version:"0.2.0"});
+  send(ws,{type:"hello",version:"0.3.0"});
   send(ws,snapshot());
   ws.on("message", raw => {
     let msg; try { msg=JSON.parse(raw.toString()); } catch { return; }
@@ -242,7 +214,16 @@ wss.on("connection", ws => {
     if (msg.type==="join") {
       if (sockets.get(ws)) return;
       if (players.length>=3 || (state && state.started)) { send(ws,{type:"error",message:"Stanza piena o partita già iniziata."}); return; }
-      const p={id:nextPlayerId++,name:String(msg.name||"Pilota").slice(0,18),team:players.length,ws};
+      const requested=msg.faction;
+      if(requested!=null&&(typeof requested!=="string"||!MechFactions.getFaction(requested))){
+        send(ws,{type:"error",message:"Fazione non valida."});return;
+      }
+      const taken=new Set(players.map(player=>player.faction));
+      const faction=requested||MechFactions.factions.find(f=>!taken.has(f.id))?.id;
+      if(!faction||taken.has(faction)){
+        send(ws,{type:"error",message:"Fazione già scelta. Selezionane un'altra."});return;
+      }
+      const p={id:nextPlayerId++,name:String(msg.name||"Pilota").slice(0,18),team:players.length,faction,ws};
       players.push(p); sockets.set(ws,p.id);
       send(ws,{type:"joined",playerId:p.id});
       log;

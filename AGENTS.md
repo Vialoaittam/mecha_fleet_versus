@@ -3,7 +3,7 @@
 ## Obiettivo e ambiente
 
 Prototipo PvP tattico per browser: una mappa 20×20, 2–3 giocatori,
-due Super Robot, quattro Real Robot, un Support e una Capital Ship per giocatore. Il server Node.js è autorevole;
+quattro fazioni selezionabili, ognuna con una Capital Ship e quattro unità. Il server Node.js è autorevole;
 il browser visualizza lo stato e invia comandi WebSocket.
 
 Richiede Node.js 18 o superiore e npm. L'unica dipendenza applicativa è `ws`.
@@ -30,6 +30,7 @@ Lo stato vive in memoria e viene perso quando il server termina.
 | --- | --- |
 | `server.js` | Server HTTP dei file in `public/`, lobby, identità dei socket, creazione flotte, turni, azioni, vittoria e disconnessioni. |
 | `public/index.html` | Struttura dell'interfaccia; carica `movement.js` prima di `client.js`. |
+| `public/factions.js` | Fazioni, roster e carichi di attacco per unità condivisi fra client e server. |
 | `public/client.js` | Connessione WebSocket, rendering Canvas, selezione e modalità delle azioni, pannelli e messaggi. |
 | `public/movement.js` | Ricerca delle caselle raggiungibili senza attraversare unità vive, condivisa tra server e browser. |
 | `public/style.css` | Layout responsive e dimensioni della mappa. |
@@ -41,7 +42,7 @@ HTTP e WebSocket condividono la porta `PORT`, predefinita `8080`, su `0.0.0.0`.
 `PORT=0` assegna una porta libera ed è usato dai test. Solo `public/` è servita via HTTP.
 
 Il server invia `hello` e uno snapshot `state` alla connessione. Un messaggio
-`{type:"join",name}` assegna l'identità tramite `joined`; il server associa il socket
+`{type:"join",name,faction}` assegna l'identità tramite `joined`; il server associa il socket
 al giocatore. I comandi usano `action` (`start`, `endTurn`, `move`, `attack`,
 `resupply`, `repair`, `skill`, `react`) con `unitId` e, secondo il caso, `x`/`y`, `targetId` o `weapon`.
 Le modalità `armMove`, `armLaser`, ecc. sono locali al client, non comandi del server.
@@ -54,14 +55,14 @@ Le azioni accettate pubblicano un nuovo snapshot a tutti i socket.
 - L'identità arriva dall'associazione al socket, mai da un proprietario dichiarato
   dal client. Il server convalida turno, proprietà, HP e disponibilità dell'azione.
 - Ogni unità muove una volta e agisce una volta per turno. La Capital Ship può muoversi di 1 casella per turno e ha una speciale a gittata 8; i danni delle armi non hanno un moltiplicatore generale.
-  Il movimento usa passi ortogonali (4 per mecha, 3 per supporto), resta nella mappa
+  Il movimento usa passi ortogonali (3–5 per mecha secondo il ruolo), resta nella mappa
   e non attraversa né occupa altre unità vive. Modifica `movement.js` per mantenere
   identiche convalida del server e caselle evidenziate dal client.
-- Armi valide: `melee`, `gun`, `laser` e `special` (individuale, VT >=120). Usa `public/rules.js` condiviso tra server e browser per statistiche, costi e gittate.
+- Armi valide: `melee`, `gun`, `laser` e `special` (individuale, VT >=120). I danni, costi e nomi individuali sono in `public/factions.js`; `public/rules.js` li consulta da server e browser. Ogni colpo oscilla ±4%. Le scelte di fazione sono uniche in una lobby.
 - Gli attacchi creano `state.pendingAttack`; solo il proprietario del difensore può rispondere con `react` (`defend`, `evade` o `counter` + arma). Il server risolve colpi, armatura, SP, VT e distruzione; durante l'attesa nessun'altra azione è ammessa.
 - Skill: `aim`, `flash`, `invincible`, `foresight`, `trust`, `gain`. Le skill consumano SP e non l'azione; Flash scade all'inizio del prossimo turno del proprietario, Invincible si consuma solo se arriva danno.
 
-- Supporto e nave riparano o riforniscono un'altra unità propria entro distanza 2,
+- La Capital Ship ripara o rifornisce un'altra unità propria entro distanza 2,
   rispettando i massimi HP/EN/munizioni e consumando l'azione.
 - Fine turno: azzera `moved`/`acted` e rigenera 8 EN e 10 SP alle unità vive del giocatore
   uscente, poi passa al prossimo proprietario con nave viva. Il giro aumenta il round.
@@ -85,6 +86,8 @@ Esegui dalla radice del progetto:
 npm ci
 npm test
 node --check server.js
+node --check public/factions.js
+node --check public/rules.js
 node --check public/movement.js
 node --check public/client.js
 npm start
