@@ -30,7 +30,7 @@
     {id:"universalcentury",name:"Gundam Universal Century",units:[
       ["White Base","carrier",["Anti-Air Defense","Missile Launchers","Mega Particle Gun","White Base Full Barrage"]],
       ["RX-78-2 Gundam","striker",["Beam Saber","Head Vulcan","Beam Rifle","Last Shooting"]],
-      ["Guncannon","artillery",["Guncannon Tackle","Missile Launchers","Shoulder Cannon","Double Cannon Barrage"]],
+      ["Guncannon","artillery",["Guncannon Tackle","Guncannon Missile Volley","Shoulder Cannon","Double Cannon Barrage"]],
       ["Guntank","heavy",["Tracked Ram","Arm Rocket Launchers","120mm Twin Cannons","Guntank Full Suppression"]],
       ["Core Booster","agile",["Close Flyby","Air-to-Air Missiles","Mega Particle Cannon","High Speed Assault"]]
     ]}
