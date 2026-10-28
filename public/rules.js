@@ -18,7 +18,12 @@
     laser:{label:"Laser (25 EN)",damage:5000,accuracy:.85,min:2,max:5,en:25,ammo:0,vt:0}
   };
   function weapon(unit,id){
-    if(typeof id!=="string")return null;
+    if(typeof id!=="string"||!unit||!["melee","gun","laser","special"].includes(id))return null;
+    // Le nuove flotte hanno armamenti per singola unità; il fallback mantiene
+    // compatibili i client e i test che inviano ancora unità del prototipo.
+    if(unit.weapons){
+      return Object.prototype.hasOwnProperty.call(unit.weapons,id)?unit.weapons[id]:null;
+    }
     if(id==="special"&&unit.special)return {
       label:unit.special.name,damage:unit.special.damage,accuracy:unit.special.accuracy||.8,
       min:unit.special.min||2,max:unit.special.max||6,en:unit.special.en||40,
