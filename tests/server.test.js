@@ -129,7 +129,7 @@ test("lobby: limiti, solo host, posto liberato e nuovo host", { timeout: 10000 }
   await fourth.next(m => m.type === "joined");
   second.send({ action: "start" });
   const started = await second.next(m => m.type === "state" && m.state?.started);
-  assert.equal(started.state.units.length, 24);
+  assert.equal(started.state.units.length, 15);
   assert.equal(started.state.activePlayer, second.id);
 });
 
@@ -169,17 +169,17 @@ test("messaggi WebSocket non validi non interrompono la partita", { timeout: 800
   assert.equal(state.activePlayer, second.id);
 });
 
-test("flotte SRW, skill, risorse e scadenza Flash", { timeout: 10000 }, async t => {
+test("flotte a fazioni, skill, risorse e scadenza Flash", { timeout: 10000 }, async t => {
   const game=await room(t);
   const [first,second]=await game.start();
   const mine=()=>first.state.units.filter(u=>u.owner===first.id);
-  assert.equal(mine().length,8);
-  assert.equal(mine().filter(u=>u.type==="super").length,2);
-  assert.equal(mine().filter(u=>u.type==="real").length,4);
-  assert.equal(mine().filter(u=>u.type==="support").length,1);
-  assert.equal(mine().find(u=>u.type==="real").maxHp,7500);
-  assert.ok(mine().find(u=>u.type==="super").armor>mine().find(u=>u.type==="real").armor);
-  assert.ok(mine().find(u=>u.type==="real").evasion>mine().find(u=>u.type==="super").evasion);
+  assert.equal(mine().length,5);
+  assert.equal(mine().filter(u=>u.type==="ship").length,1);
+  assert.equal(mine().filter(u=>u.type==="mech").length,4);
+  assert.equal(mine()[0].name,"Ptolemaios");
+  assert.equal(mine()[1].name,"Exia");
+  assert.ok(mine()[2].armor>mine()[3].armor);
+  assert.ok(mine()[4].evasion>mine()[2].evasion);
   const id=`p${first.id}-m1`,ally=`p${first.id}-m2`;
   let s=await game.act(first,{action:"skill",unitId:id,skill:"aim"});
   assert.equal(s.units.find(u=>u.id===id).status.aim,true);
@@ -220,8 +220,11 @@ test("attacco attende la scelta del difensore e Defend applica armor prima del 2
   second.send({action:"react",response:"defend"});
   s=(await second.next(m=>m.type==="state"&&m.state?.pendingAttack===null&&m.state?.units.find(u=>u.id===targetId).hp<before)).state;
   target=s.units.find(u=>u.id===targetId);
-  const expected=Math.round(Math.max(0,5000-target.armor)*.75);
-  assert.equal(target.hp,before-expected);
+  const weapon=require("../public/rules").weapon(attacker,"laser");
+  const dealt=before-target.hp;
+  const lower=Math.round(Math.max(0,Math.round(weapon.damage*.96)-target.armor)*.75);
+  const upper=Math.round(Math.max(0,Math.round(weapon.damage*1.04)-target.armor)*.75);
+  assert.ok(dealt>=lower-1&&dealt<=upper+1,`Danno ${dealt}, atteso ${lower}..${upper}`);
   assert.equal(s.pendingAttack,null);
   assert.equal(s.units.find(u=>u.id===id).en,75);
   await game.cycle(first,second);
@@ -270,4 +273,48 @@ test("Capital Ship: movimento lento consentito una volta per turno", {timeout:80
   await game.act(second,{action:"endTurn"});
   const reset = await first.next(m=>m.type==="state"&&m.state?.activePlayer===first.id);
   assert.equal(reset.state.units.find(u=>u.id===id).moved,false);
+});
+
+test("fazioni esplicite: uniche, valide e rispettate in partita",{timeout:10000},async t=>{
+  const game=await room(t);
+  const first=await game.connect();
+  first.send({type:"join",name:"A",faction:"codegeass"});
+  first.id=(await first.next(m=>m.type==="joined")).playerId;
+  await first.update();
+  const second=await game.connect();
+  second.send({type:"join",name:"B",faction:"codegeass"});
+  assert.match((await second.next(m=>m.type==="error")).message,/già scelta/i);
+  second.send({type:"join",name:"B",faction:"invalid"});
+  assert.match((await second.next(m=>m.type==="error")).message,/non valida/i);
+  second.send({type:"join",name:"B",faction:"macross"});
+  second.id=(await second.next(m=>m.type==="joined")).playerId;
+  const lobby=await second.update();
+  assert.deepEqual(lobby.players.map(p=>p.faction),["codegeass","macross"]);
+  first.send({action:"start"});
+  const started=await first.next(m=>m.type==="state"&&m.state?.started);
+  const firstNames=started.state.units.filter(u=>u.owner===first.id).map(u=>u.name);
+  const secondNames=started.state.units.filter(u=>u.owner===second.id).map(u=>u.name);
+  assert.deepEqual(firstNames,["Damocles","Gekkoei","Guren","Lancelot","Sutherland Sieg"]);
+  assert.deepEqual(secondNames,["Macross Quarter","VF-25F Messiah","VF-25G Messiah","VB-6 König Monster","Queadluun-Rhea"]);
+  assert.equal(new Set(started.state.units.map(u=>u.name)).size,10);
+});
+
+test("le armi sono specifiche per unità e non accettano identificatori arbitrari",()=>{
+  const factions=require("../public/factions"),rules=require("../public/rules");
+  assert.equal(factions.factions.length,4);
+  for(const faction of factions.factions){
+    const units=factions.buildRoster(faction.id);
+    assert.equal(units.length,5);
+    assert.equal(units.filter(u=>u.type==="ship").length,1);
+    const labels=[];
+    for(const unit of units){
+      assert.deepEqual(Object.keys(unit.weapons),["melee","gun","laser","special"]);
+      labels.push(...Object.values(unit.weapons).map(w=>w.label));
+      assert.equal(rules.weapon({...unit,hp:unit.hp,en:100,ammo:16,vt:100},"special").vt,120);
+      assert.equal(rules.canFire({...unit,hp:unit.hp,en:100,ammo:16,vt:100},"special",3),false);
+      assert.equal(rules.canFire({...unit,hp:unit.hp,en:100,ammo:16,vt:120},"special",3),true);
+    }
+    assert.equal(new Set(labels).size,20);
+  }
+  assert.equal(rules.weapon({weapons:{gun:{label:"Test"}}},"__proto__"),null);
 });
