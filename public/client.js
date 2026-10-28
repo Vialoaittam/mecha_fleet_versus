@@ -55,7 +55,7 @@ function send(obj){
 $("join").onclick=()=>{
   if(joined||joining||ws?.readyState!==WebSocket.OPEN)return;
   joining=true;
-  send({type:"join",name:$("name").value.trim()||"Pilota"});
+  send({type:"join",name:$("name").value.trim()||"Pilota",faction:$("faction").value});
   $("join").disabled=true;
 };
 $("start").onclick=()=>send({action:"start"});
@@ -64,8 +64,18 @@ $("endTurn").onclick=()=>send({action:"endTurn"});
 function renderAll(){
   const connected=ws?.readyState===WebSocket.OPEN;
   $("players").innerHTML=players.map((p,i)=>
-    `<div class="playerRow"><span>${i===0?"★ ":""}${esc(p.name)}${p.id===myId?" (tu)":""}</span><span>${p.connected?"● online":"○ disconnesso"}</span></div>`
+    `<div class="playerRow"><span>${i===0?"★ ":""}${esc(p.name)}${p.id===myId?" (tu)":""}<br><small>${esc(p.factionName||MechFactions.getFaction(p.faction)?.name||"")}</small></span><span>${p.connected?"● online":"○ disconnesso"}</span></div>`
   ).join("");
+  const factionSelect=$("faction");
+  if(factionSelect&&!joined){
+    const chosen=factionSelect.value;
+    const occupied=new Set(players.map(p=>p.faction));
+    const available=MechFactions.factions.filter(f=>!occupied.has(f.id));
+    factionSelect.innerHTML=available.map(f=>
+      `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join("");
+    factionSelect.value=available.some(f=>f.id===chosen)?chosen:available[0]?.id||"";
+    factionSelect.disabled=!connected||joining||available.length===0;
+  }else if(factionSelect)factionSelect.disabled=true;
 
   $("start").disabled=!(connected&&players[0]?.id===myId&&players.length>=2&&!state?.started);
   $("join").disabled=!connected||joining||joined||players.length>=3||!!state?.started;
@@ -102,7 +112,7 @@ function renderFleet(){
   panel.innerHTML=mine.map(u=>`
     <div class="playerRow">
       <span>
-        <strong>${esc(u.name||(u.type==="ship"?"Capital Ship":u.type==="support"?"Supporto":"Mecha "+u.id))}</strong>
+        <strong>${esc(u.name||(u.type==="ship"?"Capital Ship":"Mecha "+u.id))}</strong>
         <br>HP: ${u.hp}/${u.maxHp}
       </span>
       <span>${u.hp>0?(u.acted?"Agito":"Disponibile"):"Distrutto"}</span>
@@ -237,7 +247,8 @@ function renderUnit(){
     for(const id of ["melee","gun","laser","special"]){
       const w=MechRules.weapon(u,id);
       if(!w)continue;
-      add(w.label+(id==="special"?` (VT ${w.vt}, ${w.en} EN)`:""),"armAttack:"+id,
+      const cost=id==="special"?` · VT ${w.vt}`:w.en?` · ${w.en} EN`:w.ammo?` · ${w.ammo} mun.`:"";
+      add(`${w.label} · ${w.damage} DMG · ${Math.round(w.accuracy*100)}% · ${w.min}–${w.max}${cost}`,"armAttack:"+id,
         u.en<w.en||u.ammo<w.ammo||u.vt<w.vt);
     }
   }
@@ -270,21 +281,66 @@ function renderReaction(){
   const defender=state.units.find(u=>u.id===pending.targetId);
   if(!attacker||!defender)return;
   panel.classList.remove("hidden");
-  const label=document.createElement("p");
-  label.textContent=`${attacker.name} attacca ${defender.name} con ${MechRules.weapon(attacker,pending.weapon)?.label||pending.weapon}. Scegli la difesa:`;
-  panel.appendChild(label);
-  function button(text,response,weapon){
+  const intro=document.createElement("div");
+  intro.className="combatEyebrow";
+  intro.textContent="Tactical battle · React";
+  panel.appendChild(intro);
+  const title=document.createElement("h2");
+  title.textContent="Scegli la risposta";
+  panel.appendChild(title);
+  const match=document.createElement("div");
+  match.className="combatMatchup";
+  // Nomi non fidati: usare textContent (non innerHTML) in ogni riquadro.
+  const attackBox=document.createElement("div");
+  const attackerTitle=document.createElement("strong");
+  attackerTitle.textContent=attacker.name;
+  const weaponTitle=document.createElement("small");
+  const incoming=MechRules.weapon(attacker,pending.weapon);
+  weaponTitle.textContent=`${incoming?.label||"Attacco"} · ${incoming?.damage||0} DMG`;
+  attackBox.appendChild(attackerTitle);attackBox.appendChild(weaponTitle);
+  const versus=document.createElement("span");
+  versus.className="combatVS";
+  versus.textContent="VS";
+  const defenseBox=document.createElement("div");
+  const targetTitle=document.createElement("strong");
+  targetTitle.textContent=defender.name;
+  const armorTitle=document.createElement("small");
+  armorTitle.textContent=`HP ${defender.hp} · ARM ${defender.armor||0}`;
+  defenseBox.appendChild(targetTitle);defenseBox.appendChild(armorTitle);
+  match.appendChild(attackBox);match.appendChild(versus);match.appendChild(defenseBox);
+  panel.appendChild(match);
+  const choices=document.createElement("div");
+  choices.className="combatChoices";
+  panel.appendChild(choices);
+  function button(title,detail,response,weapon){
     const b=document.createElement("button");
-    b.textContent=text;
+    const strong=document.createElement("strong");
+    strong.textContent=title;
+    const small=document.createElement("small");
+    small.textContent=detail;
+    b.appendChild(strong);b.appendChild(small);
+    // Consente anche ai browser con lettori di schermo di riconoscere la scelta.
+    b.setAttribute?.("aria-label",title+": "+detail);
     b.onclick=()=>send({action:"react",response,weapon});
+    choices.appendChild(b);
+    // I test DOM esistenti cercano pulsanti tra i figli del pannello.
     panel.appendChild(b);
   }
-  button("Defend (-25% danno dopo armor)","defend");
-  button("Evade (+25% evasione)","evade");
+  button("Defend","-25% danno residuo dopo l'armatura","defend");
+  button("Evade","-25 punti percentuali alla probabilità di essere colpiti","evade");
+  const separator=document.createElement("div");
+  separator.className="combatSeparator";
+  separator.textContent="Counter · scegli l'arma";
+  panel.appendChild(separator);
+  const distance=Math.abs(defender.x-attacker.x)+Math.abs(defender.y-attacker.y);
+  let available=false;
   for(const id of ["melee","gun","laser","special"]){
-    if(MechRules.canFire(defender,id,Math.abs(defender.x-attacker.x)+Math.abs(defender.y-attacker.y)))
-      button("Counter: "+MechRules.weapon(defender,id).label,"counter",id);
+    if(!MechRules.canFire(defender,id,distance))continue;
+    available=true;
+    const w=MechRules.weapon(defender,id);
+    button("Counter: "+w.label,`${w.damage} DMG · Hit ${Math.round(w.accuracy*100)}% · gittata ${w.min}–${w.max}`,"counter",id);
   }
+  if(!available)separator.textContent="Nessun contrattacco disponibile";
 }
 function armMode(m){
   mode=m;
