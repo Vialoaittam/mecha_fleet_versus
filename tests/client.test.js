@@ -41,7 +41,7 @@ function client() {
     document: { getElementById: get, createElement: element },
     location: { protocol: "http:", host: "localhost:8080" }, WebSocket: Socket
   });
-  for (const file of ["movement.js", "rules.js", "client.js"]) {
+  for (const file of ["movement.js", "factions.js", "rules.js", "client.js"]) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../public", file), "utf8"), context);
   }
   const ws = Socket.instance;
