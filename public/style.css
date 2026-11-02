@@ -21,3 +21,33 @@ select:disabled{opacity:.6}
 .combatSeparator{color:#f0c078;font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin:12px 0 7px;font-weight:700}
 .actions button{white-space:normal;text-align:left}
 @media(max-width:600px){.combatMatchup{grid-template-columns:1fr;gap:4px}.combatVS{text-align:center}}
+
+
+/* Filmati di combattimento: pixel-art originale e overlay non bloccante per la logica. */
+.battleOverlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:16px;background:#030a12e8;backdrop-filter:blur(5px)}
+.battleScene{width:min(740px,100%);background:radial-gradient(ellipse at 50% 15%,#27415b,#0c1724 65%);border:2px solid #517293;border-radius:14px;box-shadow:0 0 55px #000c;overflow:hidden;padding:18px}
+.battleTop{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.battleTag{font-size:11px;font-weight:800;letter-spacing:.18em;color:#f0c078}
+.battleSkip{padding:7px 11px;background:#23394d;border-color:#7891a7}
+.battleDuel{display:grid;grid-template-columns:minmax(0,1fr) 18% minmax(0,1fr);align-items:center;min-height:240px;position:relative}
+.battleActor{min-width:0;text-align:center;transition:transform .35s ease,opacity .35s ease,filter .35s ease}
+.battleActor strong{display:block;overflow-wrap:anywhere;font-size:clamp(12px,2vw,17px);margin-top:5px}
+.battleSprite{height:clamp(115px,23vw,180px);display:grid;place-items:center;filter:drop-shadow(0 7px 2px #0007)}
+.battleSprite svg{height:100%;max-width:100%;image-rendering:pixelated}
+.battleDefender .battleSprite{transform:scaleX(-1)}
+.battleProjectile{height:8px;opacity:0;transform:scaleX(.1);transform-origin:left;background:linear-gradient(90deg,#fff,#7ce6ff,#fff);box-shadow:0 0 17px 7px #5dc6ff99;border-radius:10px;z-index:1}
+.battleOutcome{text-align:center;font-size:clamp(18px,4vw,30px);font-weight:900;color:#ffb7a4;letter-spacing:.1em;min-height:44px;opacity:0}
+.battleMiss .battleOutcome{color:#8ed7ff}
+.battleWeapon{text-align:center;font-size:12px;letter-spacing:.08em;color:#a9c2d8;overflow-wrap:anywhere}
+.battlePlaying .battleAttacker{animation:battleCharge .6s ease-out}
+.battlePlaying .battleProjectile{animation:battleShot .75s .3s ease-out forwards}
+.battlePlaying.battleHit .battleDefender{animation:battleImpact .4s .9s ease-out}
+.battlePlaying.battleMiss .battleDefender{animation:battleDodge .55s .7s ease-out}
+.battlePlaying .battleOutcome{animation:battleResult .5s 1s forwards}
+@keyframes battleCharge{50%{transform:translateX(20px) scale(1.07)}}
+@keyframes battleShot{20%{opacity:1;transform:scaleX(.4)}70%{opacity:1;transform:scaleX(2)}100%{opacity:0;transform:scaleX(2)}}
+@keyframes battleImpact{20%{filter:brightness(3);transform:translateX(10px)}50%{transform:translateX(-9px)}80%{transform:translateX(5px)}}
+@keyframes battleDodge{50%{transform:translateY(-40px);opacity:.4}100%{transform:translateY(0);opacity:1}}
+@keyframes battleResult{to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.battleActor,.battleProjectile,.battleOutcome{animation:none!important;transition:none!important}.battleOutcome{opacity:1}}
+@media(max-width:520px){.battleScene{padding:10px}.battleDuel{min-height:160px}.battleTop{align-items:flex-start}.battleTag{font-size:9px}}
