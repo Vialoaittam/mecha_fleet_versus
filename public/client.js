@@ -17,6 +17,7 @@ function connect(){
     $("connection").style.color="#ff7272";
     joining=false;
     mode=null;
+    if(typeof MechBattle!=="undefined")MechBattle.reset();
     renderAll();
     $("lobbyStatus").textContent="Connessione persa. Ricarica la pagina per entrare in una nuova partita.";
     $("actionStatus").textContent="Connessione persa. Ricarica la pagina; la flotta si arrende alla disconnessione.";
@@ -35,6 +36,7 @@ function connect(){
         mode=null;
         $("actionStatus").textContent="Seleziona un'unità e scegli un'azione.";
       }
+      if(typeof MechBattle!=="undefined")MechBattle.onState(state,m.state);
       state=m.state;
       players=m.players||[];
       renderAll();
