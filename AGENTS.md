@@ -32,6 +32,7 @@ Lo stato vive in memoria e viene perso quando il server termina.
 | `public/index.html` | Struttura dell'interfaccia; carica `movement.js` prima di `client.js`. |
 | `public/factions.js` | Fazioni, roster e carichi di attacco per unità condivisi fra client e server. |
 | `public/client.js` | Connessione WebSocket, rendering Canvas, selezione e modalità delle azioni, pannelli e messaggi. |
+| `public/battle-animations.js` | Sprite pixel-art procedurali e animazioni locali ricavate dalle risoluzioni nel registro. Nessuna modifica al protocollo. |
 | `public/movement.js` | Ricerca delle caselle raggiungibili senza attraversare unità vive, condivisa tra server e browser. |
 | `public/style.css` | Layout responsive e dimensioni della mappa. |
 | `tests/server.test.js` | Test HTTP e partite con server separati e client WebSocket reali. |
@@ -90,6 +91,7 @@ node --check public/factions.js
 node --check public/rules.js
 node --check public/movement.js
 node --check public/client.js
+node --check public/battle-animations.js
 npm start
 ```
 
@@ -123,3 +125,7 @@ Arresta il server manuale con `Ctrl+C`.
 Nota sul codice preesistente: `public/client - Copia.js.old` è una copia non caricata
 dalla pagina; `currentPlayer()` nel server è inutilizzata. Non usarle come fonti
 attive né rimuoverle come pulizia estranea alla richiesta.
+
+- Le animazioni sono decorative e non devono modificare HP, turni o esiti:
+  lo stato ricevuto dal server resta autorevole. Evita di inserire nomi non
+  fidati come HTML: usa `textContent`. Rispetta `prefers-reduced-motion`.
