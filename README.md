@@ -84,3 +84,18 @@ Le istruzioni per modificare, verificare e aggiornare il progetto sono in [AGENT
 - **Code Geass:** Damocles, Gekkoei, Guren, Lancelot, Sutherland Sieg.
 - **Macross Frontier:** Macross Quarter, VF-25F Messiah, VF-25G Messiah, VB-6 König Monster, Queadluun-Rhea.
 - **Gundam Universal Century:** White Base, RX-78-2 Gundam, Guncannon, Guntank, Core Booster.
+
+
+### Animazioni dei combattimenti
+
+Alla risoluzione di un attacco, tutti i client mostrano una breve scena 2D con
+sprite pixel-art generati localmente in base al nome e al ruolo delle unità
+(navi, artiglieria, unità agili e da assalto). Ogni unità del roster ha un
+aspetto riproducibile, senza immagini o librerie esterne. Il filmato mostra
+arma, bersaglio, colpo o schivata, danno e contrattacco eventuale. Il pulsante
+**Salta animazione** permette di tornare subito alla mappa; la preferenza di
+sistema per il movimento ridotto viene rispettata.
+
+La scena è **solo visiva**: il server calcola l'esito e invia i nuovi HP
+prima che l'animazione inizi. Il modulo `public/battle-animations.js` ricava
+gli eventi dai nuovi messaggi del registro e non cambia il protocollo WebSocket.
