@@ -33,21 +33,47 @@ select:disabled{opacity:.6}
 .battleActor{min-width:0;text-align:center;transition:transform .35s ease,opacity .35s ease,filter .35s ease}
 .battleActor strong{display:block;overflow-wrap:anywhere;font-size:clamp(12px,2vw,17px);margin-top:5px}
 .battleSprite{height:clamp(115px,23vw,180px);display:grid;place-items:center;filter:drop-shadow(0 7px 2px #0007)}
-.battleSprite svg{height:100%;max-width:100%;image-rendering:pixelated}
+.battleSprite svg{width:100%;height:100%;min-height:0;max-width:100%;image-rendering:pixelated;overflow:visible}
+.battleDefender{grid-column:3}
 .battleDefender .battleSprite{transform:scaleX(-1)}
-.battleProjectile{height:8px;opacity:0;transform:scaleX(.1);transform-origin:left;background:linear-gradient(90deg,#fff,#7ce6ff,#fff);box-shadow:0 0 17px 7px #5dc6ff99;border-radius:10px;z-index:1}
 .battleOutcome{text-align:center;font-size:clamp(18px,4vw,30px);font-weight:900;color:#ffb7a4;letter-spacing:.1em;min-height:44px;opacity:0}
 .battleMiss .battleOutcome{color:#8ed7ff}
 .battleWeapon{text-align:center;font-size:12px;letter-spacing:.08em;color:#a9c2d8;overflow-wrap:anywhere}
-.battlePlaying .battleAttacker{animation:battleCharge .6s ease-out}
-.battlePlaying .battleProjectile{animation:battleShot .75s .3s ease-out forwards}
-.battlePlaying.battleHit .battleDefender{animation:battleImpact .4s .9s ease-out}
-.battlePlaying.battleMiss .battleDefender{animation:battleDodge .55s .7s ease-out}
-.battlePlaying .battleOutcome{animation:battleResult .5s 1s forwards}
-@keyframes battleCharge{50%{transform:translateX(20px) scale(1.07)}}
-@keyframes battleShot{20%{opacity:1;transform:scaleX(.4)}70%{opacity:1;transform:scaleX(2)}100%{opacity:0;transform:scaleX(2)}}
-@keyframes battleImpact{20%{filter:brightness(3);transform:translateX(10px)}50%{transform:translateX(-9px)}80%{transform:translateX(5px)}}
-@keyframes battleDodge{50%{transform:translateY(-40px);opacity:.4}100%{transform:translateY(0);opacity:1}}
+/* Preparazione, propulsione, sparo, impatto e rientro in posizione. */
+.battleDuel{background:repeating-linear-gradient(0deg,transparent 0 23px,#6ea8c00b 24px),linear-gradient(transparent 78%,#31465b55 79%,transparent 80%);isolation:isolate}
+.battleProjectile{opacity:0;z-index:1;position:absolute;left:29%;right:23%;top:48%;height:5px;border-radius:0;box-shadow:none;background:none;transform:none;overflow:visible;pointer-events:none}
+.battleProjectile i{position:absolute;inset:0;display:block;opacity:0;background:#c4ffef;box-shadow:0 0 8px #74ffd5;transform:scaleX(0);transform-origin:left}
+.battleImpact{position:absolute;left:75%;top:43%;width:45px;height:45px;opacity:0;background:#ffedc2;clip-path:polygon(50% 0,60% 33%,100% 15%,72% 48%,100% 73%,63% 66%,50% 100%,37% 68%,0 86%,28% 51%,0 22%,39% 34%);pointer-events:none}
+.battlePlaying .battleAttacker{animation:battleAdvance 2.2s ease-in-out}
+.battlePlaying .spriteThruster{animation:battleThrust .18s steps(2) 10;transform-box:fill-box;transform-origin:top}
+.battlePlaying .battleAttacker .spriteArm{animation:battleAim 2.2s steps(4);transform-origin:65px 38px}
+.battlePlaying .battleAttacker .spriteWeapon{animation:battleRecoil .18s .8s 3;transform-origin:65px 50px}
+.battlePlaying.battleHit .battleDefender{animation:battleImpact .45s 1.3s steps(5)}
+.battlePlaying.battleMiss .battleDefender{animation:battleDodge .75s 1s ease-in-out}
+.battlePlaying.battleHit .battleImpact{animation:battleSpark .45s 1.3s steps(4)}
+.battlePlaying .battleOutcome{animation:battleResult .3s 1.6s forwards}
+.battlePlaying .battleProjectile{opacity:1;animation:none}
+.battlePlaying .battleProjectile i{animation:battleBeam .6s .8s ease-out}
+.battleStyle-ballistic .battleProjectile i{height:4px;width:18%;background:#ffe5a0;animation:battleBullet .4s .7s linear}
+.battleStyle-ballistic .battleProjectile i:nth-child(2){top:-12px;animation-delay:.9s}
+.battleStyle-ballistic .battleProjectile i:nth-child(3){top:12px;animation-delay:1.1s}
+.battleStyle-salvo .battleProjectile i{height:6px;background:#efacff;animation:battleBeam .7s .7s ease-out}
+.battleStyle-salvo .battleProjectile i:nth-child(2){top:-22px;animation-delay:.85s}
+.battleStyle-salvo .battleProjectile i:nth-child(3){top:22px;animation-delay:1s}
+.battleStyle-melee .battleProjectile{display:none}
+.battlePlaying.battleStyle-melee .battleAttacker{animation:battleLunge 2.2s ease-in-out;position:relative;z-index:2}
+.battlePlaying.battleStyle-melee .battleAttacker .spriteWeapon{animation:battleSlash .5s .8s steps(5)}
+@keyframes battleAdvance{0%,100%{transform:translateX(0)}25%,65%{transform:translateX(12%) translateY(-5px)}40%,55%{transform:translateX(10%) translateY(-5px)}}
+@keyframes battleLunge{0%,100%{transform:translateX(0)}25%{transform:translateX(-5%)}45%,60%{transform:translateX(105%)}80%{transform:translateX(30%)}}
+@keyframes battleAim{0%,100%{transform:rotate(0)}30%,65%{transform:rotate(-8deg)}}
+@keyframes battleRecoil{50%{transform:translateX(-3px)}}
+@keyframes battleSlash{0%{transform:rotate(-30deg)}50%{transform:rotate(35deg)}100%{transform:rotate(0)}}
+@keyframes battleThrust{50%{transform:scaleY(.6);opacity:.65}}
+@keyframes battleBeam{0%{opacity:1;transform:scaleX(0)}25%,80%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+@keyframes battleBullet{0%{opacity:1;transform:translateX(0)}90%{opacity:1}100%{opacity:0;transform:translateX(500%)}}
+@keyframes battleSpark{0%{opacity:1;transform:scale(.3) rotate(0)}50%{opacity:1;transform:scale(1.5) rotate(25deg)}100%{opacity:0;transform:scale(2)}}
+@keyframes battleImpact{20%{filter:brightness(2);transform:translateX(10px)}50%{transform:translateX(-9px)}80%{transform:translateX(5px)}}
+@keyframes battleDodge{40%,65%{transform:translateY(-45px);opacity:.5}100%{transform:translateY(0);opacity:1}}
 @keyframes battleResult{to{opacity:1}}
-@media(prefers-reduced-motion:reduce){.battleActor,.battleProjectile,.battleOutcome{animation:none!important;transition:none!important}.battleOutcome{opacity:1}}
+@media(prefers-reduced-motion:reduce){.battleOverlay *{animation:none!important;transition:none!important}.battleOutcome{opacity:1}.battleProjectile,.battleImpact{display:none}}
 @media(max-width:520px){.battleScene{padding:10px}.battleDuel{min-height:160px}.battleTop{align-items:flex-start}.battleTag{font-size:9px}}
