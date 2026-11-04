@@ -99,3 +99,18 @@ sistema per il movimento ridotto viene rispettata.
 La scena è **solo visiva**: il server calcola l'esito e invia i nuovi HP
 prima che l'animazione inizi. Il modulo `public/battle-animations.js` ricava
 gli eventi dai nuovi messaggi del registro e non cambia il protocollo WebSocket.
+
+### Sprite dettagliati e coreografie (richiesta del 4 novembre 2026)
+
+I venti personaggi usano ora una griglia pixel 96×96 con piastre sfaccettate,
+riflessi, ombre, giunture, ottiche e armamenti distinti. Le navi hanno ponte,
+hangar e batterie; Guntank mantiene i cingoli e Core Booster è un velivolo.
+In mappa si vedono i volti dei mecha e le sagome complete di navi e velivolo.
+Sono interpretazioni originali, senza immagini ufficiali o dipendenze aggiuntive.
+
+Le scene durano circa 2,4 secondi per attacco e distinguono quattro coreografie
+secondo lo slot dell'arma: assalto e fendente, raffica con tre proiettili, raggio,
+salva speciale. Includono propulsori, avanzamento e rientro, mira, rinculo,
+impatto o schivata; l'eventuale contrattacco segue l'attacco. La preferenza di
+movimento ridotto mostra un risultato statico per 250 ms. **Salta animazione**
+passa alla scena successiva, se presente. I calcoli del server restano invariati.
