@@ -51,3 +51,12 @@ test("schivata, assenza di risoluzione e snapshot iniziale", () => {
   assert.equal(result[0].weapon,"GN Sniper Rifle");
   assert.equal(result[0].damage,0);
 });
+
+test("icone della mappa mostrano il volto e sagome delle navi", () => {
+  const head = spriteSvg({name:"Exia"},true);
+  const ship = spriteSvg({name:"Ptolemaios",type:"ship"},true);
+  assert.match(head,/viewBox="18 2 28 26"/);
+  assert.match(ship,/viewBox="0 0 64 64"/);
+  assert.notEqual(spriteSvg({name:"Guren"}),spriteSvg({name:"Lancelot"}));
+  assert.notEqual(spriteSvg({name:"VF-25F Messiah"}),spriteSvg({name:"VF-25G Messiah"}));
+});

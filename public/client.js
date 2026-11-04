@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 const canvas=$("board"), ctx=canvas.getContext("2d");
 let ws=null, myId=null, players=[], state=null, selected=null, joined=false, joining=false, obstacles=[];
 const TILE=40, SIZE=20;
+const unitIcons=new Map();
 
 function connect(){
   const proto=location.protocol==="https:"?"wss:":"ws:";
@@ -165,27 +166,21 @@ function draw(){
     ctx.strokeStyle=own?"#bde3ff":"#ffd0d0";
     ctx.lineWidth=2;
 
-    if(u.type==="ship"){
-      ctx.beginPath();
-      ctx.moveTo(x+20,y+4);
-      ctx.lineTo(x+35,y+31);
-      ctx.lineTo(x+20,y+26);
-      ctx.lineTo(x+5,y+31);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }else if(u.type==="support"){
-      ctx.fillRect(x+9,y+9,22,22);
-      ctx.strokeRect(x+9,y+9,22,22);
-      ctx.fillStyle="#e9f7ff";
-      ctx.fillRect(x+18,y+12,4,16);
-      ctx.fillRect(x+12,y+18,16,4);
-    }else{
-      ctx.fillRect(x+11,y+7,18,26);
-      ctx.fillRect(x+6,y+12,7,15);
-      ctx.fillRect(x+27,y+12,7,15);
-      ctx.strokeRect(x+11,y+7,18,26);
-    }
+    // Sulla mappa mostra la testa dei mecha; navi e carri mantengono
+    // una sagoma intera. Le immagini sono memorizzate per evitare ricreazioni.
+    const key=String(u.name||"")+":"+u.type;
+    if(typeof MechBattle!=="undefined" && typeof Image!=="undefined"){
+      if(!unitIcons.has(key)){
+        const icon=new Image();
+        unitIcons.set(key,icon);
+        icon.onload=()=>{if(state?.started)draw();};
+        icon.src="data:image/svg+xml;charset=utf-8,"+
+          encodeURIComponent(MechBattle.spriteSvg(u,true));
+      }
+      const icon=unitIcons.get(key);
+      if(icon.complete && icon.naturalWidth>0)ctx.drawImage(icon,x+5,y+3,30,29);
+      else {ctx.fillRect(x+9,y+8,22,23);ctx.strokeRect(x+9,y+8,22,23);}
+    }else{ctx.fillRect(x+9,y+8,22,23);ctx.strokeRect(x+9,y+8,22,23);}
 
     if(u.id===selected){
       ctx.strokeStyle="#ffe082";
